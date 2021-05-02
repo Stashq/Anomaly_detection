@@ -37,12 +37,14 @@ class LSTM_ED(NeuralNet):
             hidden_size=self.seq_len,
             num_layers=self.n_layers,
             # dropout=self.dropout,
+            batch_first=True,
         )
         self.lstm_decoder = nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.seq_len,
             num_layers=self.n_layers,
             # dropout=drop_prob,
+            batch_first=True,
         )
         self.mlp_decoder = torch.nn.Linear(
             in_features=self.seq_len,
@@ -163,8 +165,9 @@ class LSTM_ED(NeuralNet):
         Returns
         -----------
         torch.Tensor - size: (batch_size, seq_len, input_size)'''
-        hn = self._init_state(seq_len=self.seq_len, h_size=self.seq_len)
-        cn = self._init_state(seq_len=self.seq_len, h_size=self.seq_len)
+        batch_size = x.size()[0]
+        hn = self._init_state(seq_len=batch_size, h_size=self.seq_len)
+        cn = self._init_state(seq_len=batch_size, h_size=self.seq_len)
         emb, (hn, cn) = self.lstm_encoder(x, (hn, cn))
 
         # we pass hn (and cn?) to decoder
@@ -173,8 +176,8 @@ class LSTM_ED(NeuralNet):
         # x_(i)' is used as input of next LSTM cell to predict x_(i-1)
         x_preds = torch.empty(size=x.size()).to(self.device)
         x_pred = emb[:, -1, :].unsqueeze(1)
-        cn = self._init_state(seq_len=1, h_size=self.seq_len)
-        hn = hn[:, -1, :].unsqueeze(1)
+        # cn = self._init_state(seq_len=batch_size, h_size=self.seq_len)
+        # hn = hn[:, -1, :].unsqueeze(1)
         for i in reversed(range(self.seq_len)):
             if i < self.seq_len - 1:
                 x_pred = x_pred.unsqueeze(1)
