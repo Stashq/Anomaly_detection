@@ -14,8 +14,11 @@ class CNNClassifier(NeuralNet):
     ):
         super().__init__(
             loss_fn=torch.nn.CrossEntropyLoss,
-            lr=lr, Optimizer=Optimizer, device=device
+            device=device
         )
+        self._init_layers()
+        self.optimizer = Optimizer(self.parameters(), lr=lr)
+        self.to(device)
 
     def _init_layers(self):
         self.conv1 = nn.Conv1d(in_channels=1, out_channels=3, kernel_size=5,

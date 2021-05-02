@@ -13,9 +13,7 @@ class NeuralNet(nn.Module):
         device: torch.device = torch.device("cpu")
     ):
         super().__init__()
-        self._init_layers()
         self.loss_fn = loss_fn()
-        self.optimizer = Optimizer(self.parameters(), lr=lr)
         self.device = device
 
     def _init_layers(self):
