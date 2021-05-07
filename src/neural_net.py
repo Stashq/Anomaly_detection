@@ -7,13 +7,13 @@ from typing import Type, Literal
 class NeuralNet(nn.Module):
     def __init__(
         self,
-        loss_fn: torch.nn.modules.module.Module,
+        Loss_fn: torch.nn.modules.module.Module,
         lr: float = 1e-4,
         Optimizer: Type[torch.optim.Optimizer] = torch.optim.Adam,
         device: torch.device = torch.device("cpu")
     ):
         super().__init__()
-        self.loss_fn = loss_fn()
+        self.loss_fn = Loss_fn()
         self.device = device
 
     def _init_layers(self):

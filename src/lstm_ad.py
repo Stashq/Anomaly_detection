@@ -6,11 +6,14 @@ from typing import Literal
 from torch.utils.tensorboard import SummaryWriter
 
 
-class LSTM_ED(NeuralNet):
+class LSTM_AD(NeuralNet):
     def __init__(
         self,
         input_size: int,
-        seq_len: int,
+        output_size: int,
+        n_next_predicted: int,
+        hidden_size1: int,
+        hidden_size2: int,
         n_layers: int = 1,
         dropout: float = None,
         lr: float = 1e-4,
@@ -22,18 +25,48 @@ class LSTM_ED(NeuralNet):
             device=device
         )
         self.input_size = input_size
-        # seq_len:
-        # - number of LSTM units,
-        # - used as hidden states size
-        self.seq_len = seq_len
+        self.output_size = output_size
+        self.n_next_predicted = n_next_predicted
+        self.hidden_size1 = hidden_size1
+        self.hidden_size2 = hidden_size2
         self.n_layers = n_layers
         self.dropout = dropout
         self._init_layers()
         self.optimizer = Optimizer(self.parameters(), lr=lr)
         self.to(device)
 
-    def _init_layers(self):
-        self.lstm_encoder = nn.LSTM(
+    def _init_layers(
+        self,
+        input_size: int,
+        output_size: int,
+        n_next_predicted: int,
+        hidden_size1: int,
+        hidden_size2: int,
+        n_layers: int = 1,
+    ):
+        self.input_lstms = [
+            nn.LSTM(
+                input_size=1,
+                hidden_size=hidden_size1,
+                num_layers=n_layers,
+                # dropout=self.dropout,
+                batch_first=True,
+            )
+            for _ in range(input_size)
+        ]
+        self.output_lstm = [
+            [
+                nn.LSTM(
+                    input_size=1,
+                    hidden_size=hidden_size1,
+                    num_layers=n_layers,
+                    # dropout=self.dropout,
+                    batch_first=True,
+                )
+                for _ in range(output_size)
+            ]
+        ]
+        nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.seq_len,
             num_layers=self.n_layers,

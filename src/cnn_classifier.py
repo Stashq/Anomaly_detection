@@ -13,7 +13,7 @@ class CNNClassifier(NeuralNet):
         device: torch.device = torch.device("cpu")
     ):
         super().__init__(
-            loss_fn=torch.nn.CrossEntropyLoss,
+            Loss_fn=torch.nn.CrossEntropyLoss,
             device=device
         )
         self._init_layers()

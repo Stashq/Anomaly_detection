@@ -1,9 +1,7 @@
 import pandas as pd
-import seaborn as sns
 from typing import Union
-from .utils import x_y_split
+from src.utils.data import x_y_split
 
-sns.set_style("darkgrid")
 dir_path = "data/UCRArchive_2018"
 
 
