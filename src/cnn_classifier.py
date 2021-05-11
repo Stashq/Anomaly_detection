@@ -36,3 +36,30 @@ class CNNClassifier(NeuralNet):
         x = F.relu(self.fc1(x))
         x = F.softmax(self.fc2(x), dim=1)
         return x
+
+    def _run_minibatch(
+        self,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        purpose: str,
+        loss_sum: torch.Tensor,
+        y_trues: torch.Tensor,
+        y_preds: torch.Tensor
+    ) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+        '''- Pass minibatch through the model,
+        - apply backpropagation if training is the purpose,
+        - adds the currently produced loss,
+        - append true y from minibatch,
+        - append pred y predicted for minibatch.
+        '''
+        y_pred = self(x)
+        loss = self.loss_fn(y_pred, y)
+        if purpose == "train":
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+        loss_sum += loss.item()
+        y_trues = torch.cat((y_trues, y), 0)
+        y_preds = torch.cat((y_preds, torch.argmax(y_pred, axis=1)), 0)
+        return loss_sum, y_trues, y_preds

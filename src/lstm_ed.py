@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from typing import Type
-from src.neural_net import NeuralNet
+from .bases.deep_anomaly_detector import DeepAnomalyDetector
 from typing import Literal
 from torch.utils.tensorboard import SummaryWriter
 
 
-class LSTM_ED(NeuralNet):
+class LSTM_ED(DeepAnomalyDetector):
     def __init__(
         self,
         input_size: int,
@@ -134,31 +134,31 @@ class LSTM_ED(NeuralNet):
             writer=writer
         )
 
-    def _run_minibatch(
-        self,
-        x: torch.Tensor,
-        purpose: str,
-        loss_sum: torch.Tensor,
-        x_preds: torch.Tensor
-    ) -> (torch.Tensor, torch.Tensor):
-        '''- Pass minibatch through the model,
-        - apply backpropagation if training is the purpose,
-        - adds the currently produced loss,
-        - append true y from minibatch,
-        - append pred y predicted for minibatch.
-        '''
-        x_pred = self(x)
-        x_preds = torch.cat((x_preds, x_pred), 0)
+    # def _run_minibatch(
+    #     self,
+    #     x: torch.Tensor,
+    #     purpose: str,
+    #     loss_sum: torch.Tensor,
+    #     x_preds: torch.Tensor
+    # ) -> (torch.Tensor, torch.Tensor):
+    #     '''- Pass minibatch through the model,
+    #     - apply backpropagation if training is the purpose,
+    #     - adds the currently produced loss,
+    #     - append true y from minibatch,
+    #     - append pred y predicted for minibatch.
+    #     '''
+    #     x_pred = self(x)
+    #     x_preds = torch.cat((x_preds, x_pred), 0)
 
-        loss = self.loss_fn(x_pred, x)
-        loss_sum += loss.item()
+    #     loss = self.loss_fn(x_pred, x)
+    #     loss_sum += loss.item()
 
-        if purpose == "train":
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+    #     if purpose == "train":
+    #         self.optimizer.zero_grad()
+    #         loss.backward()
+    #         self.optimizer.step()
 
-        return loss_sum, x_preds
+    #     return loss_sum, x_preds
 
     def forward(self, x: torch.Tensor):
         '''

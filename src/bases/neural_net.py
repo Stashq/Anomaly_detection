@@ -30,17 +30,28 @@ class NeuralNet(nn.Module):
         model_name: str = "1",
         logdir: str = "logs",
         flush: bool = False,
-        verbose: int = 0
+        verbose: int = 1
     ):
         '''Train model on given dataset. Optionaly validate training progress
         on validation dataset. Write loss and score while executing.'''
         writer = SummaryWriter(logdir + "/" + model_name)
         for epoch in range(epochs):
-            self._run(train_loader, epoch, "train", writer, verbose)
+            self._run(
+                data_loader=train_loader,
+                epoch=epoch,
+                purpose="train",
+                writer=writer,
+                verbose=verbose
+            )
             if validation_loader is not None:
                 with torch.no_grad():
-                    self._run(validation_loader, epoch, "validation",
-                              writer, verbose)
+                    self._run(
+                        data_loader=validation_loader,
+                        epoch=epoch,
+                        purpose="validation",
+                        writer=writer,
+                        verbose=verbose
+                    )
             if flush is True:
                 writer.flush()
         writer.close()
@@ -90,16 +101,7 @@ class NeuralNet(nn.Module):
         - append true y from minibatch,
         - append pred y predicted for minibatch.
         '''
-        y_pred = self(x)
-        loss = self.loss_fn(y_pred, y)
-        if purpose == "train":
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-        loss_sum += loss.item()
-        y_trues = torch.cat((y_trues, y), 0)
-        y_preds = torch.cat((y_preds, torch.argmax(y_pred, axis=1)), 0)
-        return loss_sum, y_trues, y_preds
+        pass
 
     def _write_epoch_summary(
         self,

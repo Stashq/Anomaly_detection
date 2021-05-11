@@ -28,13 +28,13 @@ def create_data_loader(
         if anomalies is not None:
             new_anomalies = torch.cat([
                 new_anomalies,
-                anomalies[i:i+window].unsqueeze(0)
-            ])  # POWINNA BYĆ JEDNA WARTOŚĆ NA PRÓBKĘ
+                anomalies[i].unsqueeze(0)
+            ])
         else:
             new_anomalies = torch.cat([
                 new_anomalies,
-                torch.tensor([0]*window).unsqueeze(0)
-            ])  # POWINNA BYĆ JEDNA WARTOŚĆ NA PRÓBKĘ
+                torch.tensor([0]).unsqueeze(0)
+            ])
 
     if model_type == "CNN":
         # (batch_size, number_of_chanels, sequence_length)
@@ -52,5 +52,3 @@ def create_data_loader(
         new_anomalies,
     )
     return torch.utils.data.DataLoader(dataset, **params)
-
-# def 

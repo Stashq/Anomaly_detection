@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Type
-from .neural_net import NeuralNet
+from .bases.deep_anomaly_detector import DeepAnomalyDetector
 from typing import Literal
 from torch.utils.tensorboard import SummaryWriter
 
 
-class DeepAnt(NeuralNet):
+class DeepAnt(DeepAnomalyDetector):
     def __init__(
         self,
         window_size: int,
@@ -73,6 +73,7 @@ class DeepAnt(NeuralNet):
         epoch: int,
         purpose: Literal["train", "validation"] = None,
         writer: SummaryWriter = None,
+        return_error: bool = False,
         verbose: int = 0
     ):
         '''Run model on given dataset. After that, write loss and score.
@@ -98,30 +99,31 @@ class DeepAnt(NeuralNet):
             verbose=verbose,
             writer=writer
         )
+        return torch.abs(y_trues - y_preds).detach().numpy()
 
-    def _run_minibatch(
-        self,
-        x: torch.Tensor,
-        y: torch.Tensor,
-        purpose: str,
-        loss_sum: torch.Tensor,
-        y_preds: torch.Tensor
-    ) -> (torch.Tensor, torch.Tensor):
-        '''- Pass minibatch through the model,
-        - apply backpropagation if training is the purpose,
-        - adds the currently produced loss,
-        - append true y from minibatch,
-        - append pred y predicted for minibatch.
-        '''
-        y_pred = self(x)
-        loss = self.loss_fn(y_pred, y)
-        if purpose == "train":
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-        loss_sum += loss.item()
-        y_preds = torch.cat([
-            y_preds,
-            y_pred
-        ])
-        return loss_sum, y_preds
+    # def _run_minibatch(
+    #     self,
+    #     x: torch.Tensor,
+    #     y: torch.Tensor,
+    #     purpose: str,
+    #     loss_sum: torch.Tensor,
+    #     y_preds: torch.Tensor
+    # ) -> (torch.Tensor, torch.Tensor):
+    #     '''- Pass minibatch through the model,
+    #     - apply backpropagation if training is the purpose,
+    #     - adds the currently produced loss,
+    #     - append true y from minibatch,
+    #     - append pred y predicted for minibatch.
+    #     '''
+    #     y_pred = self(x)
+    #     loss = self.loss_fn(y_pred, y)
+    #     if purpose == "train":
+    #         self.optimizer.zero_grad()
+    #         loss.backward()
+    #         self.optimizer.step()
+    #     loss_sum += loss.item()
+    #     y_preds = torch.cat([
+    #         y_preds,
+    #         y_pred
+    #     ])
+    #     return loss_sum, y_preds

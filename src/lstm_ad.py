@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from typing import Type
-from src.neural_net import NeuralNet
+from .bases.deep_anomaly_detector import DeepAnomalyDetector
 from typing import Literal
 from torch.utils.tensorboard import SummaryWriter
 
 
-class LSTM_AD(NeuralNet):
+class LSTM_AD(DeepAnomalyDetector):
     def __init__(
         self,
         window_size: int,
@@ -94,19 +94,19 @@ class LSTM_AD(NeuralNet):
     def train(
         self,
         train_loader: torch.utils.data.DataLoader,
-        data_storage: Literal["records", "single"],
         validation_loader: torch.utils.data.DataLoader = None,
         epochs: int = 20,
         model_name: str = "1",
         logdir: str = "logs",
         flush: bool = False,
+        train_detector: bool = False,
         verbose: int = 0
     ):
         '''Train model on given dataset. Optionaly validate training progress
         on validation dataset. Write loss and score while executing.'''
         writer = SummaryWriter(logdir + "/" + model_name)
         for epoch in range(epochs):
-            self._run(train_loader, epoch, data_storage,
+            self._run(train_loader, epoch,
                       "train", writer, verbose)
             if validation_loader is not None:
                 with torch.no_grad():
@@ -120,7 +120,6 @@ class LSTM_AD(NeuralNet):
         self,
         data_loader: torch.utils.data.DataLoader,
         epoch: int,
-        data_storage: Literal["records", "single"],
         purpose: Literal["train", "validation"] = None,
         writer: SummaryWriter = None,
         verbose: int = 0
@@ -147,6 +146,7 @@ class LSTM_AD(NeuralNet):
             verbose=verbose,
             writer=writer
         )
+        return torch.abs(y_trues - y_preds).detach().numpy()
 
     def _run_minibatch(
         self,
