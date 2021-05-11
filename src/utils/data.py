@@ -12,7 +12,7 @@ def x_y_split(
 
 def create_data_loader(
     x: torch.Tensor,
-    window: int,
+    window_size: int,
     model_type: Literal["CNN", "LSTM"] = "CNN",
     device: str = 'cpu',
     anomalies: torch.Tensor = None,
@@ -22,9 +22,9 @@ def create_data_loader(
     new_y = torch.tensor([])
     new_anomalies = torch.tensor([])
 
-    for i in range(x.shape[0] - window):
-        new_x = torch.cat([new_x, x[i:i+window].unsqueeze(0)])
-        new_y = torch.cat([new_y, x[i+window].unsqueeze(0)])
+    for i in range(x.shape[0] - window_size):
+        new_x = torch.cat([new_x, x[i:i+window_size].unsqueeze(0)])
+        new_y = torch.cat([new_y, x[i+window_size].unsqueeze(0)])
         if anomalies is not None:
             new_anomalies = torch.cat([
                 new_anomalies,

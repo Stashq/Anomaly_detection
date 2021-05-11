@@ -26,7 +26,7 @@ class NeuralNet(nn.Module):
         self,
         train_loader: torch.utils.data.DataLoader,
         validation_loader: torch.utils.data.DataLoader = None,
-        epochs: int = 20,
+        n_epochs: int = 20,
         model_name: str = "1",
         logdir: str = "logs",
         flush: bool = False,
@@ -35,7 +35,7 @@ class NeuralNet(nn.Module):
         '''Train model on given dataset. Optionaly validate training progress
         on validation dataset. Write loss and score while executing.'''
         writer = SummaryWriter(logdir + "/" + model_name)
-        for epoch in range(epochs):
+        for epoch in range(n_epochs):
             self._run(
                 data_loader=train_loader,
                 epoch=epoch,

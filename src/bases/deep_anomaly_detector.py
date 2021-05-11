@@ -58,9 +58,10 @@ class DeepAnomalyDetector(NeuralNet):
             return_error=True,
             verbose=verbose
         )
-        true_anomalies = validation_loader.dataset[:][2].squeeze(1).numpy()
-        pred_anomalies = self.anomaly_detector.predict_anomaly(
-                         errors, indices=False)
+        true_anomalies = validation_loader.dataset[:][2]\
+            .squeeze(1).cpu().numpy()
+        pred_anomalies = self.anomaly_detector\
+            .predict_anomaly(errors, indices=False)
         print("\"evaluate_detector\": Here should be some metric... \
             (not implemented)")
         return true_anomalies, pred_anomalies
@@ -98,7 +99,7 @@ class DeepAnomalyDetector(NeuralNet):
             writer=writer
         )
         if return_error:
-            return torch.abs(y_trues - y_preds).detach().numpy()
+            return torch.abs(y_trues - y_preds).cpu().detach().numpy()
 
     def _run_minibatch(
         self,
@@ -129,3 +130,23 @@ class DeepAnomalyDetector(NeuralNet):
 
         loss_sum += loss.item()
         return loss_sum, preds
+
+    def get_true_pred_anomalies(
+        self,
+        validation_loader: torch.utils.data.DataLoader,
+        verbose: int = 0
+    ):
+        errors = self._run(
+            data_loader=validation_loader,
+            epoch=0,
+            purpose="evaluate detector",
+            writer=None,
+            return_error=True,
+            verbose=verbose
+        )
+
+        pred_anomalies = self.anomaly_detector\
+            .predict_anomaly(errors, indices=False)
+        true_anomalies = validation_loader.dataset[:][2]\
+            .squeeze(1).cpu().numpy()
+        return true_anomalies, pred_anomalies

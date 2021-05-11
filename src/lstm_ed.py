@@ -10,7 +10,7 @@ class LSTM_ED(DeepAnomalyDetector):
     def __init__(
         self,
         input_size: int,
-        seq_len: int,
+        window_size: int,
         n_layers: int = 1,
         dropout: float = None,
         lr: float = 1e-4,
@@ -22,10 +22,10 @@ class LSTM_ED(DeepAnomalyDetector):
             device=device
         )
         self.input_size = input_size
-        # seq_len:
+        # seq_len (window_size):
         # - number of LSTM units,
         # - used as hidden states size
-        self.seq_len = seq_len
+        self.window_size = window_size
         self.n_layers = n_layers
         self.dropout = dropout
         self._init_layers()
@@ -35,20 +35,20 @@ class LSTM_ED(DeepAnomalyDetector):
     def _init_layers(self):
         self.lstm_encoder = nn.LSTM(
             input_size=self.input_size,
-            hidden_size=self.seq_len,
+            hidden_size=self.window_size,
             num_layers=self.n_layers,
             # dropout=self.dropout,
             batch_first=True,
         )
         self.lstm_decoder = nn.LSTM(
             input_size=self.input_size,
-            hidden_size=self.seq_len,
+            hidden_size=self.window_size,
             num_layers=self.n_layers,
             # dropout=drop_prob,
             batch_first=True,
         )
         self.mlp_decoder = torch.nn.Linear(
-            in_features=self.seq_len,
+            in_features=self.window_size,
             out_features=1,
         )
 
@@ -69,9 +69,8 @@ class LSTM_ED(DeepAnomalyDetector):
     def train(
         self,
         train_loader: torch.utils.data.DataLoader,
-        data_storage: Literal["records", "single"],
         validation_loader: torch.utils.data.DataLoader = None,
-        epochs: int = 20,
+        n_epochs: int = 20,
         model_name: str = "1",
         logdir: str = "logs",
         flush: bool = False,
@@ -80,13 +79,22 @@ class LSTM_ED(DeepAnomalyDetector):
         '''Train model on given dataset. Optionaly validate training progress
         on validation dataset. Write loss and score while executing.'''
         writer = SummaryWriter(logdir + "/" + model_name)
-        for epoch in range(epochs):
-            self._run(train_loader, epoch, data_storage,
-                      "train", writer, verbose)
+        for epoch in range(n_epochs):
+            self._run(
+                data_loader=train_loader,
+                epoch=epoch,
+                purpose="train",
+                writer=writer,
+                verbose=verbose
+            )
             if validation_loader is not None:
                 with torch.no_grad():
-                    self._run(validation_loader, epoch, "validation",
-                              writer, verbose)
+                    self._run(
+                        data_loader=validation_loader,
+                        epoch=epoch,
+                        purpose="validation",
+                        writer=writer,
+                        verbose=verbose)
             if flush is True:
                 writer.flush()
         writer.close()
@@ -95,10 +103,10 @@ class LSTM_ED(DeepAnomalyDetector):
         self,
         data_loader: torch.utils.data.DataLoader,
         epoch: int,
-        data_storage: Literal["records", "single"],
         purpose: Literal["train", "validation"] = None,
         writer: SummaryWriter = None,
-        verbose: int = 0
+        verbose: int = 0,
+        return_error: bool = False
     ):
         '''Run model on given dataset. After that, write loss and score'''
         if purpose is None:
@@ -106,22 +114,11 @@ class LSTM_ED(DeepAnomalyDetector):
             return None
         loss_sum = 0
         x_preds = torch.Tensor([]).to(self.device)
-        if data_storage == "records":
-            for x, y, anomalies in data_loader:
-                loss_sum, x_preds = self._run_minibatch(
-                    x=x, purpose=purpose,
-                    loss_sum=loss_sum, x_preds=x_preds
-                )
-        elif data_storage == "single":
-            raise NotImplementedError()
-            x, y = data_loader.dataset[:]
-            for i in range(len(data_loader.dataset) - self.seq_len):
-                # x_batch, y_ = self.get_batch(data_loader)
-                x_batch = x[i:i+self.seq_len].unsqueeze(0)
-                loss_sum, x_preds = self._run_minibatch(
-                    x=x_batch, purpose=purpose,
-                    loss_sum=loss_sum, x_preds=x_preds
-                )
+        for x, y, anomalies in data_loader:
+            loss_sum, x_preds = self._run_minibatch(
+                x=x, y=None, purpose=purpose,
+                loss_sum=loss_sum, preds=x_preds
+            )
 
         x_trues, _, _ = data_loader.dataset[:]
         self._write_epoch_summary(
@@ -133,6 +130,9 @@ class LSTM_ED(DeepAnomalyDetector):
             verbose=verbose,
             writer=writer
         )
+        if return_error:
+            return torch.abs(x_trues - x_preds)\
+                .squeeze(-1).cpu().detach().numpy()
 
     # def _run_minibatch(
     #     self,
@@ -170,8 +170,9 @@ class LSTM_ED(DeepAnomalyDetector):
         -----------
         torch.Tensor - size: (batch_size, seq_len, input_size)'''
         batch_size = x.size()[0]
-        hn = self._init_state(batch_size=batch_size, h_size=self.seq_len)
-        cn = self._init_state(batch_size=batch_size, h_size=self.seq_len)
+        hn = self._init_state(batch_size=batch_size, h_size=self.window_size)
+        cn = self._init_state(batch_size=batch_size, h_size=self.window_size)
+
         emb, (hn, cn) = self.lstm_encoder(x, (hn, cn))
 
         # we pass hn (and cn?) to decoder
@@ -180,8 +181,8 @@ class LSTM_ED(DeepAnomalyDetector):
         # x_(i)' is used as input of next LSTM cell to predict x_(i-1)
         x_preds = torch.empty(size=x.size()).to(self.device)
         x_pred = emb[:, -1, :].unsqueeze(1)
-        for i in reversed(range(self.seq_len)):
-            if i < self.seq_len - 1:
+        for i in reversed(range(self.window_size)):
+            if i < self.window_size - 1:
                 x_pred = x_pred.unsqueeze(1)
                 x_pred, (hn, cn) = self.lstm_decoder(x_pred, (hn, cn))
             x_pred = x_pred.squeeze(1)

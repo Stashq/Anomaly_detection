@@ -95,7 +95,7 @@ class LSTM_AD(DeepAnomalyDetector):
         self,
         train_loader: torch.utils.data.DataLoader,
         validation_loader: torch.utils.data.DataLoader = None,
-        epochs: int = 20,
+        n_epochs: int = 20,
         model_name: str = "1",
         logdir: str = "logs",
         flush: bool = False,
@@ -105,7 +105,7 @@ class LSTM_AD(DeepAnomalyDetector):
         '''Train model on given dataset. Optionaly validate training progress
         on validation dataset. Write loss and score while executing.'''
         writer = SummaryWriter(logdir + "/" + model_name)
-        for epoch in range(epochs):
+        for epoch in range(n_epochs):
             self._run(train_loader, epoch,
                       "train", writer, verbose)
             if validation_loader is not None:
@@ -122,7 +122,8 @@ class LSTM_AD(DeepAnomalyDetector):
         epoch: int,
         purpose: Literal["train", "validation"] = None,
         writer: SummaryWriter = None,
-        verbose: int = 0
+        verbose: int = 0,
+        return_error: bool = False
     ):
         '''Run model on given dataset. After that, write loss and score'''
         if purpose is None:
@@ -146,7 +147,9 @@ class LSTM_AD(DeepAnomalyDetector):
             verbose=verbose,
             writer=writer
         )
-        return torch.abs(y_trues - y_preds).detach().numpy()
+        if return_error:
+            return torch.abs(y_trues - y_preds)\
+                .squeeze(-1).cpu().detach().numpy()
 
     def _run_minibatch(
         self,

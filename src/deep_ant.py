@@ -73,8 +73,8 @@ class DeepAnt(DeepAnomalyDetector):
         epoch: int,
         purpose: Literal["train", "validation"] = None,
         writer: SummaryWriter = None,
-        return_error: bool = False,
-        verbose: int = 0
+        verbose: int = 0,
+        return_error: bool = False
     ):
         '''Run model on given dataset. After that, write loss and score.
         '''
@@ -87,7 +87,7 @@ class DeepAnt(DeepAnomalyDetector):
         for x, y, anomalies in data_loader:
             loss_sum, y_preds = self._run_minibatch(
                 x=x, y=y, purpose=purpose,
-                loss_sum=loss_sum, y_preds=y_preds
+                loss_sum=loss_sum, preds=y_preds
             )
         y_trues = data_loader.dataset.tensors[1]
         self._write_epoch_summary(
@@ -99,7 +99,7 @@ class DeepAnt(DeepAnomalyDetector):
             verbose=verbose,
             writer=writer
         )
-        return torch.abs(y_trues - y_preds).detach().numpy()
+        return torch.abs(y_trues - y_preds).squeeze(-1).cpu().detach().numpy()
 
     # def _run_minibatch(
     #     self,
